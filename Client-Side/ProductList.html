@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex">
+  <div class="flex min-h-screen">
+ 
+    <div class="bg-blue-500 text-white w-64 p-6">
+      <a href="./ProductList.html"><h2 class="text-xl font-bold mb-6">Dashboard</h2></a>
+      <ul>
+        <li class="mb-4">
+          <a href="./Product.html" class="hover:underline">Product</a>
+        </li>
+        <li class="mb-4">
+          <a href="./Category.html" class="hover:underline">Category</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="flex-1 container mx-auto p-6">
+      <h1 class="text-2xl font-bold mb-6 text-center">Product List</h1>
+      <div class="overflow-x-auto">
+        <table class="table-auto w-full bg-white shadow-md rounded-lg">
+          <thead class="bg-blue-500 text-white">
+            <tr>
+              <th class="px-4 py-2">ProductId</th>
+              <th class="px-4 py-2">ProductName</th>
+              <th class="px-4 py-2">CategoryName</th>
+              <th class="px-4 py-2">CategoryId</th>
+            </tr>
+          </thead>
+          <tbody id="product-list" class="text-center">
+       
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 flex justify-center space-x-4" id="pagination-controls">        
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const productApiUrl = "http://localhost:3000/api/product/getByPagination"; 
+    let currentPage = 1;
+    const pageSize = 10;
+
+
+    async function fetchProducts(page) {
+      try {
+        const response = await fetch(`${productApiUrl}?page=${page}&pageSize=${pageSize}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          renderProducts(data.products);
+          renderPagination(data.pagination);
+        } else {
+          console.error('Error fetching products:', data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    }
+
+
+    function renderProducts(products) {
+      const productList = document.getElementById("product-list");
+      productList.innerHTML = ""; 
+
+      products.forEach(product => {
+        const row = document.createElement("tr");
+        row.className = "border-t hover:bg-gray-100";
+        row.innerHTML = `
+          <td class="px-4 py-2">${product.ProductId}</td>
+          <td class="px-4 py-2">${product.ProductName}</td>
+          <td class="px-4 py-2">${product.CategoryName}</td>
+          <td class="px-4 py-2">${product.CategoryId}</td>
+        `;
+        productList.appendChild(row);
+      });
+    }
+
+
+    function renderPagination(pagination) {
+      const paginationControls = document.getElementById("pagination-controls");
+      paginationControls.innerHTML = ""; 
+
+      if (pagination.currentPage > 1) {
+        const prevButton = document.createElement("button");
+        prevButton.innerText = "Previous";
+        prevButton.className = "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600";
+        prevButton.onclick = () => fetchProducts(pagination.currentPage - 1);
+        paginationControls.appendChild(prevButton);
+      }
+
+      for (let i = 1; i <= pagination.totalPages; i++) {
+        const pageButton = document.createElement("button");
+        pageButton.innerText = i;
+        pageButton.className = `px-4 py-2 ${i === pagination.currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200'} rounded hover:bg-blue-300`;
+        pageButton.onclick = () => fetchProducts(i);
+        paginationControls.appendChild(pageButton);
+      }
+
+      if (pagination.currentPage < pagination.totalPages) {
+        const nextButton = document.createElement("button");
+        nextButton.innerText = "Next";
+        nextButton.className = "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600";
+        nextButton.onclick = () => fetchProducts(pagination.currentPage + 1);
+        paginationControls.appendChild(nextButton);
+      }
+    }
+
+    fetchProducts(currentPage);
+  </script>
+</body>
+
+</html>

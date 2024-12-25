@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Page</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      width: 300px;
+    }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex">
+  <div class="flex min-h-screen">
+    <div class="bg-blue-500 text-white w-64 p-6">
+      <a href="./ProductList.html">
+        <h2 class="text-xl font-bold mb-6 cursor-pointer">Dashboard</h2>
+      </a>
+      <ul>
+        <li class="mb-4">
+          <a href="./Product.html" id="product-page" class="hover:underline">Product</a>
+        </li>
+        <li class="mb-4">
+          <a href="./Category.html" id="category-page" class="hover:underline">Category</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="flex-1 container mx-auto p-6">
+      <h1 class="text-2xl font-bold mb-6 text-center">Product List</h1>
+
+      <div class="mb-6">
+        <form id="createProductForm" class="space-y-4">
+          <div class="flex space-x-4 mb-4">
+            <div class="flex-1">
+              <label for="productName" class="block font-medium">Product Name:</label>
+              <input type="text" id="productName" name="productName" class="w-full px-3 py-2 border rounded" required>
+            </div>
+            <div class="flex-1">
+              <label for="categoryName" class="block font-medium">Category Name:</label>
+              <input type="text" id="categoryName" name="categoryName" class="w-full px-3 py-2 border rounded" required>
+            </div>
+          </div>
+          <button type="submit" id="submitBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Create</button>
+        </form>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="table-auto w-full bg-white shadow-md rounded-lg">
+          <thead class="bg-blue-500 text-white">
+            <tr>
+              <th class="px-4 py-2">Product ID</th>
+              <th class="px-4 py-2">Product Name</th>
+              <th class="px-4 py-2">Category</th>
+              <th class="px-4 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="product-list" class="text-center">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" onclick="closePopup()"></div>
+  <div class="popup" id="popup">
+    <h2 class="text-xl font-bold mb-4">Edit Product</h2>
+    <form id="editProductForm" class="space-y-4">
+      <div class="mb-4">
+        <label for="editProductName" class="block font-medium">Product Name:</label>
+        <input type="text" id="editProductName" name="productName" class="w-full px-3 py-2 border rounded" required>
+      </div>
+      <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Update Product</button>
+    </form>
+  </div>
+
+  <script>
+    const apiUrl = "http://localhost:3000/api/product/getAll";
+
+    async function fetchProducts() {
+      try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const products = await response.json();
+        renderProducts(products);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
+    }
+
+    function renderProducts(products) {
+      const productList = document.getElementById("product-list");
+      productList.innerHTML = "";
+      products.forEach(product => {
+        const row = document.createElement("tr");
+        row.className = "border-t hover:bg-gray-100";
+        row.innerHTML = `
+          <td class="px-4 py-2">${product.ProductId}</td>
+          <td class="px-4 py-2">${product.name}</td>
+          <td class="px-4 py-2">${product.category}</td>
+          <td class="px-4 py-2">
+            <button class="bg-yellow-500 text-white px-4 py-1 rounded hover:bg-yellow-600" onclick="editProduct(${product.ProductId})">Edit</button>
+            <button class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600" onclick="deleteProduct(${product.ProductId})">Delete</button>
+          </td>
+        `;
+        productList.appendChild(row);
+      });
+    }
+
+    function openPopup() {
+      document.getElementById("overlay").style.display = "block";
+      document.getElementById("popup").style.display = "block";
+    }
+
+    function closePopup() {
+      document.getElementById("overlay").style.display = "none";
+      document.getElementById("popup").style.display = "none";
+    }
+
+    async function editProduct(productId) {
+      try {
+        const response = await fetch(`http://localhost:3000/api/product/get/${productId}`);
+        const product = await response.json();
+
+        if (response.ok) {
+          document.getElementById("editProductName").value = product.name;
+          openPopup();
+
+          document.getElementById("editProductForm").onsubmit = async function (e) {
+            e.preventDefault();
+
+            const productName = document.getElementById("editProductName").value;
+
+            try {
+              const response = await fetch(`http://localhost:3000/api/product/update/${productId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: productName }),
+              });
+
+              if (response.ok) {
+                alert("Product updated successfully!");
+                fetchProducts();
+                closePopup();
+              } else {
+                alert("Failed to update product.");
+              }
+            } catch (error) {
+              console.error("Error updating product:", error);
+            }
+          };
+        } else {
+          alert("Failed to fetch product details.");
+        }
+      } catch (error) {
+        console.error("Error editing product:", error);
+      }
+    }
+
+    async function deleteProduct(productId) {
+      const confirmation = confirm("Are you sure you want to delete this product?");
+      if (confirmation) {
+        try {
+          const response = await fetch(`http://localhost:3000/api/product/delete/${productId}`, {
+            method: "DELETE",
+          });
+
+          if (response.ok) {
+            alert("Product deleted successfully!");
+            fetchProducts();
+          } else {
+            alert("Failed to delete product.");
+          }
+        } catch (error) {
+          console.error("Error deleting product:", error);
+        }
+      }
+    }
+
+    document.getElementById("createProductForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const productName = document.getElementById("productName").value.trim();
+      const categoryName = document.getElementById("categoryName").value; 
+      if (!productName) {
+        alert("Please enter the Product Name.");
+        return;
+      }
+      if (!categoryName) {
+        alert("Please enter a Category.");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:3000/api/product/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: productName, CategoryName: categoryName }),
+        });
+
+        if (response.ok) {
+          alert("Product created successfully!");
+          document.getElementById("createProductForm").reset();
+          fetchProducts();
+        } else {
+          const error = await response.json();
+          alert(`Failed to create product: ${error.message}`);
+        }
+      } catch (error) {
+        console.error("Error creating product:", error);
+        alert("An unexpected error occurred. Please try again.");
+      }
+    });
+
+    fetchProducts();
+  </script>
+</body>
+
+</html>
